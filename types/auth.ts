@@ -47,7 +47,7 @@ export interface RegisterRequest {
   username?: string;
 }
 
-export const DEFAULT_PERMISSIONS = {
+export const LEGACY_ROLE_PERMISSIONS = {
   streaming: [
     { id: 'setup_access', name: 'Setup Access', description: 'Access to setup configuration', category: 'setup' },
     { id: 'stream_control', name: 'Stream Control', description: 'Control live streaming', category: 'streaming' },

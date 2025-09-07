@@ -1,4 +1,5 @@
 import { User, LoginCredentials, CreateUserRequest, DEFAULT_PERMISSIONS, RegisterRequest } from '@/types/auth';
+import { LEGACY_ROLE_PERMISSIONS } from '@/types/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 
@@ -53,7 +54,7 @@ class AuthService {
         lastSignInAt: data.user.last_sign_in_at ? new Date(data.user.last_sign_in_at) : undefined,
         isActive: profileData.is_active ?? true,
         emailConfirmedAt: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : undefined,
-        permissions: profileData.role === 'admin' ? DEFAULT_PERMISSIONS.admin : DEFAULT_PERMISSIONS.streaming,
+        permissions: profileData.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : LEGACY_ROLE_PERMISSIONS.streaming,
         createdBy: profileData.created_by,
       };
 
@@ -173,7 +174,7 @@ class AuthService {
         lastSignInAt: session.user.last_sign_in_at ? new Date(session.user.last_sign_in_at) : undefined,
         isActive: profileData.is_active ?? true,
         emailConfirmedAt: session.user.email_confirmed_at ? new Date(session.user.email_confirmed_at) : undefined,
-        permissions: profileData.role === 'admin' ? DEFAULT_PERMISSIONS.admin : DEFAULT_PERMISSIONS.streaming,
+        permissions: profileData.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : LEGACY_ROLE_PERMISSIONS.streaming,
         createdBy: profileData.created_by,
       };
 
@@ -233,7 +234,7 @@ class AuthService {
         createdAt: new Date(authData.user.created_at),
         isActive: profileData.is_active ?? true,
         emailConfirmedAt: authData.user.email_confirmed_at ? new Date(authData.user.email_confirmed_at) : undefined,
-        permissions: profileData.role === 'admin' ? DEFAULT_PERMISSIONS.admin : DEFAULT_PERMISSIONS.streaming,
+        permissions: profileData.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : LEGACY_ROLE_PERMISSIONS.streaming,
         createdBy: this.currentUser?.id,
       };
 
@@ -277,7 +278,7 @@ class AuthService {
         lastSignInAt: authData.user.last_sign_in_at ? new Date(authData.user.last_sign_in_at) : undefined,
         isActive: data.is_active ?? true,
         emailConfirmedAt: authData.user.email_confirmed_at ? new Date(authData.user.email_confirmed_at) : undefined,
-        permissions: data.role === 'admin' ? DEFAULT_PERMISSIONS.admin : DEFAULT_PERMISSIONS.streaming,
+        permissions: data.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : LEGACY_ROLE_PERMISSIONS.streaming,
         createdBy: data.created_by,
       };
 
@@ -329,7 +330,7 @@ class AuthService {
               lastSignInAt: authData.user.last_sign_in_at ? new Date(authData.user.last_sign_in_at) : undefined,
               isActive: profile.is_active ?? true,
               emailConfirmedAt: authData.user.email_confirmed_at ? new Date(authData.user.email_confirmed_at) : undefined,
-              permissions: profile.role === 'admin' ? DEFAULT_PERMISSIONS.admin : DEFAULT_PERMISSIONS.streaming,
+              permissions: profile.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : LEGACY_ROLE_PERMISSIONS.streaming,
               createdBy: profile.created_by,
             });
           }
