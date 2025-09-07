@@ -78,3 +78,18 @@ export const DEFAULT_PERMISSIONS = {
 
 export type PermissionId = keyof typeof DEFAULT_PERMISSIONS;
 export type Permission = typeof DEFAULT_PERMISSIONS[PermissionId];
+
+// types/auth.ts
+export const DEFAULT_ROLE_PERMISSIONS: Record<Role, PermissionId[]> = {
+  admin: [
+    'users.invite',
+    // other admin permissions…
+  ],
+  streaming: [
+    // add only what streamers should have
+  ],
+};
+
+// types/auth.ts
+export const getPermissionsForRole = (role: Role): PermissionId[] =>
+  DEFAULT_ROLE_PERMISSIONS[role] ?? [];
