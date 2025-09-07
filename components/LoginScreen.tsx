@@ -59,13 +59,16 @@ export default function LoginScreen() {
       return;
     }
 
-    if (!isValidEmail(email)) {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!isValidEmail(trimmedEmail)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address');
       return;
     }
     const credentials: LoginCredentials = {
-      email,
-      password,
+      email: trimmedEmail,
+      password: trimmedPassword,
       loginType: 'streaming', // Default to streaming for simplified login
     };
 
@@ -82,20 +85,25 @@ export default function LoginScreen() {
       return;
     }
 
-    if (!isValidEmail(email)) {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+    const trimmedConfirmPassword = confirmPassword.trim();
+    const trimmedFullName = fullName.trim();
+
+    if (!isValidEmail(trimmedEmail)) {
       Alert.alert('Invalid Email', 'Please enter a valid email address');
       return;
     }
-    if (password !== confirmPassword) {
+    if (trimmedPassword !== trimmedConfirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
 
     const registerData: RegisterRequest = {
-      name: fullName,
-      email,
-      password,
-      confirmPassword,
+      name: trimmedFullName,
+      email: trimmedEmail,
+      password: trimmedPassword,
+      confirmPassword: trimmedConfirmPassword,
       phone: phone || undefined,
       username: username || undefined,
     };
