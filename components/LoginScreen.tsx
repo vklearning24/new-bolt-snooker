@@ -377,6 +377,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   verifyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backToLoginButton: {
+    backgroundColor: '#2C2C2E',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  backToLoginText: {
+    color: '#40E0D0',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   form: {
     gap: 16,
   },
