@@ -8,7 +8,6 @@ import { LoginCredentials, RegisterRequest } from '@/types/auth';
 
 export default function LoginScreen() {
   const [isRegistering, setIsRegistering] = useState(false);
-  const [loginType, setLoginType] = useState<'streaming' | 'admin'>('streaming');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -39,7 +38,7 @@ export default function LoginScreen() {
     const credentials: LoginCredentials = {
       email,
       password,
-      loginType,
+      loginType: 'streaming', // Default to streaming for simplified login
     };
 
     try {
@@ -110,15 +109,9 @@ export default function LoginScreen() {
     }
   };
 
-  const fillDemoCredentials = (type: 'streaming' | 'admin') => {
-    setLoginType(type);
-    if (type === 'streaming') {
-      setEmail('streamer@example.com');
-      setPassword('demo123');
-    } else {
-      setEmail('admin@example.com');
-      setPassword('admin123');
-    }
+  const fillDemoCredentials = () => {
+    setEmail('admin@example.com');
+    setPassword('admin123');
   };
 
   return (
@@ -182,47 +175,12 @@ export default function LoginScreen() {
                 </View>
                 {!isRegistering && (
                   <>
-                    {/* Login Type Selection */}
-                    <View style={styles.typeSelector}>
-                      <TouchableOpacity
-                        style={[styles.typeButton, loginType === 'streaming' && styles.activeType]}
-                        onPress={() => setLoginType('streaming')}
-                      >
-                        <Zap size={20} color={loginType === 'streaming' ? '#fff' : '#40E0D0'} />
-                        <Text style={[styles.typeText, loginType === 'streaming' && styles.activeTypeText]}>
-                          Streaming Access
-                        </Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[styles.typeButton, loginType === 'admin' && styles.activeType]}
-                        onPress={() => setLoginType('admin')}
-                      >
-                        <Shield size={20} color={loginType === 'admin' ? '#fff' : '#40E0D0'} />
-                        <Text style={[styles.typeText, loginType === 'admin' && styles.activeTypeText]}>
-                          Admin Access
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* Access Level Description */}
-                    <View style={styles.accessDescription}>
-                      {loginType === 'streaming' ? (
-                        <View>
-                          <Text style={styles.accessTitle}>Streaming Access Includes:</Text>
-                          <Text style={styles.accessItem}>• Setup & Configuration</Text>
-                          <Text style={styles.accessItem}>• Live Stream Controls</Text>
-                          <Text style={styles.accessItem}>• Logo & Branding Management</Text>
-                        </View>
-                      ) : (
-                        <View>
-                          <Text style={styles.accessTitle}>Admin Access Includes:</Text>
-                          <Text style={styles.accessItem}>• All Streaming Features</Text>
-                          <Text style={styles.accessItem}>• Scoreboard Management</Text>
-                          <Text style={styles.accessItem}>• Moments & Summary</Text>
-                          <Text style={styles.accessItem}>• User Account Management</Text>
-                        </View>
-                      )}
+                    {/* Welcome Message */}
+                    <View style={styles.welcomeSection}>
+                      <Text style={styles.welcomeTitle}>Welcome Back</Text>
+                      <Text style={styles.welcomeSubtitle}>
+                        Sign in to access your snooker streaming platform
+                      </Text>
                     </View>
                   </>
                 )}
@@ -344,19 +302,13 @@ export default function LoginScreen() {
                 {/* Demo Credentials - Only show for login */}
                 {!isRegistering && (
                   <View style={styles.demoSection}>
-                    <Text style={styles.demoTitle}>Demo Accounts:</Text>
+                    <Text style={styles.demoTitle}>Try Demo Account:</Text>
                     <View style={styles.demoButtons}>
                       <TouchableOpacity
                         style={styles.demoButton}
-                        onPress={() => fillDemoCredentials('streaming')}
+                        onPress={fillDemoCredentials}
                       >
-                        <Text style={styles.demoButtonText}>Try Streaming</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.demoButton}
-                        onPress={() => fillDemoCredentials('admin')}
-                      >
-                        <Text style={styles.demoButtonText}>Try Admin</Text>
+                        <Text style={styles.demoButtonText}>Fill Demo Credentials</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -428,6 +380,25 @@ const styles = StyleSheet.create({
   activeToggleText: {
     color: '#fff',
   },
+  welcomeSection: {
+    backgroundColor: '#2C2C2E',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  welcomeTitle: {
+    color: '#40E0D0',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  welcomeSubtitle: {
+    color: '#B0BEC5',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   successContainer: {
     alignItems: 'center',
     paddingVertical: 20,
@@ -465,50 +436,6 @@ const styles = StyleSheet.create({
     color: '#40E0D0',
     fontSize: 14,
     fontWeight: '600',
-  },
-  typeSelector: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    backgroundColor: '#2C2C2E',
-    borderRadius: 12,
-    padding: 4,
-  },
-  typeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  activeType: {
-    backgroundColor: '#40E0D0',
-  },
-  typeText: {
-    color: '#40E0D0',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  activeTypeText: {
-    color: '#fff',
-  },
-  accessDescription: {
-    backgroundColor: '#2C2C2E',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  accessTitle: {
-    color: '#40E0D0',
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  accessItem: {
-    color: '#B0BEC5',
-    fontSize: 12,
-    marginBottom: 4,
   },
   form: {
     gap: 16,
@@ -561,18 +488,18 @@ const styles = StyleSheet.create({
   },
   demoButtons: {
     flexDirection: 'row',
-    gap: 12,
+    justifyContent: 'center',
   },
   demoButton: {
-    flex: 1,
     backgroundColor: '#3C3C3E',
     borderRadius: 8,
-    paddingVertical: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     alignItems: 'center',
   },
   demoButtonText: {
     color: '#40E0D0',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
   },
 });
