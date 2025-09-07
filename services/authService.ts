@@ -397,4 +397,5 @@ class AuthService {
       throw error;
     }
   }
+}
 export const authService = new AuthService();
