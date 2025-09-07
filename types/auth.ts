@@ -7,11 +7,11 @@ export interface User {
   lastSignInAt?: Date;
   isActive: boolean;
   emailConfirmedAt?: Date;
-  permissions: Permission[];
+  permissions: LegacyPermission[];
   createdBy?: string; // Admin who created this user
 }
 
-export interface Permission {
+export interface LegacyPermission {
   id: string;
   name: string;
   description: string;
