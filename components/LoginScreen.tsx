@@ -16,9 +16,8 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
-  const [registrationMessage, setRegistrationMessage] = useState('');
-  const { login, register, simulateVerification, isLoading, error } = useAuth();
+  const [registrationSuccess, setRegistrationSuccess] = useState<{ success: boolean; message: string } | null>(null);
+  const { login, register, isLoading, error } = useAuth();
 
   // Email validation function
   const isValidEmail = (email: string): boolean => {
@@ -75,8 +74,7 @@ export default function LoginScreen() {
 
     try {
       const result = await register(registerData);
-      setRegistrationSuccess(true);
-      setRegistrationMessage(result.message);
+      setRegistrationSuccess(result);
       
       // Clear form
       setFullName('');
@@ -90,25 +88,6 @@ export default function LoginScreen() {
     }
   };
 
-  const handleSimulateVerification = async () => {
-    if (!email) {
-      Alert.alert('Error', 'Please enter the email address to verify');
-      return;
-    }
-
-    if (!isValidEmail(email)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address');
-      return;
-    }
-    try {
-      await simulateVerification(email);
-      Alert.alert('Success', 'Email verified successfully! You can now log in.');
-      setRegistrationSuccess(false);
-      setIsRegistering(false);
-    } catch (error) {
-      Alert.alert('Verification Failed', (error as Error).message);
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -125,20 +104,12 @@ export default function LoginScreen() {
               <View style={styles.successContainer}>
                 <Mail size={48} color="#4CAF50" />
                 <Text style={styles.successTitle}>Check Your Email</Text>
-                <Text style={styles.successMessage}>{registrationMessage}</Text>
-                
-                {/* Demo Verification Button */}
-                <TouchableOpacity
-                  style={styles.verifyButton}
-                  onPress={handleSimulateVerification}
-                >
-                  <Text style={styles.verifyButtonText}>Simulate Email Verification</Text>
-                </TouchableOpacity>
+                <Text style={styles.successMessage}>{registrationSuccess.message}</Text>
                 
                 <TouchableOpacity
                   style={styles.backToLoginButton}
                   onPress={() => {
-                    setRegistrationSuccess(false);
+                    setRegistrationSuccess(null);
                     setIsRegistering(false);
                   }}
                 >
@@ -406,18 +377,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   verifyButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  backToLoginButton: {
-    paddingVertical: 8,
-  },
-  backToLoginText: {
-    color: '#40E0D0',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   form: {
     gap: 16,
   },

@@ -5,7 +5,6 @@ import { authService } from '@/services/authService';
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (userData: RegisterRequest) => Promise<{ success: boolean; message: string }>;
-  simulateVerification: (email: string) => Promise<void>;
   logout: () => void;
   createUser: (userData: CreateUserRequest) => Promise<void>;
   updateUser: (userId: string, updates: Partial<User>) => Promise<void>;
@@ -109,13 +108,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const simulateVerification = async (email: string) => {
-    try {
-      await authService.simulateEmailVerification(email);
-    } catch (error) {
-      throw error;
-    }
-  };
 
   const logout = () => {
     authService.logout();
@@ -169,7 +161,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...state,
         login,
         register,
-        simulateVerification,
         logout,
         createUser,
         updateUser,

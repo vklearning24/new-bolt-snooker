@@ -4,9 +4,9 @@ export interface User {
   name: string;
   role: 'streaming' | 'admin';
   createdAt: Date;
-  lastLogin?: Date;
+  lastSignInAt?: Date;
   isActive: boolean;
-  isVerified: boolean;
+  emailConfirmedAt?: Date;
   permissions: Permission[];
   createdBy?: string; // Admin who created this user
 }
@@ -28,7 +28,6 @@ export interface AuthState {
 export interface LoginCredentials {
   email: string;
   password: string;
-  loginType: 'streaming' | 'admin';
 }
 
 export interface CreateUserRequest {

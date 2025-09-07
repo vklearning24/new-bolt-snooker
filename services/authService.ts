@@ -1,199 +1,346 @@
-import { User, LoginCredentials, CreateUserRequest, DEFAULT_PERMISSIONS } from '@/types/auth';
+import { User, LoginCredentials, CreateUserRequest, DEFAULT_PERMISSIONS, RegisterRequest } from '@/types/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/lib/supabase';
 
-// Mock storage for demo purposes - in production, this would be a real backend
 class AuthService {
-  private users: User[] = [
-    {
-      id: '1',
-      email: 'admin@example.com',
-      name: 'Admin User',
-      role: 'admin',
-      createdAt: new Date('2024-01-01'),
-      lastLogin: new Date(),
-      isActive: true,
-      isVerified: true,
-      permissions: DEFAULT_PERMISSIONS.admin,
-    },
-    {
-      id: '2',
-      email: 'streamer@example.com',
-      name: 'Streamer User',
-      role: 'streaming',
-      createdAt: new Date('2024-01-02'),
-      lastLogin: new Date(),
-      isActive: true,
-      isVerified: true,
-      permissions: DEFAULT_PERMISSIONS.streaming,
-    },
-  ];
-
   private currentUser: User | null = null;
 
   async login(credentials: LoginCredentials): Promise<User> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: credentials.email,
+        password: credentials.password,
+      });
 
-    const user = this.users.find(u => 
-      u.email === credentials.email && 
-      u.role === credentials.loginType &&
-      u.isActive
-    );
+      if (error) {
+        throw new Error(error.message);
+      }
 
-    if (!user) {
-      throw new Error('Invalid credentials or user not found');
+      if (!data.user) {
+        throw new Error('Login failed - no user data received');
+      }
+
+      // Check if email is confirmed
+      if (!data.user.email_confirmed_at) {
+        throw new Error('Please verify your email address before logging in. Check your inbox for the verification link.');
+      }
+
+      // Fetch user profile from user_profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        throw new Error('Failed to fetch user profile');
+      }
+
+      if (!profileData) {
+        throw new Error('User profile not found');
+      }
+
+      // Construct User object
+      const user: User = {
+        id: data.user.id,
+        email: data.user.email!,
+        name: profileData.name,
+        role: profileData.role,
+        createdAt: new Date(data.user.created_at),
+        lastSignInAt: data.user.last_sign_in_at ? new Date(data.user.last_sign_in_at) : undefined,
+        isActive: profileData.is_active ?? true,
+        emailConfirmedAt: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : undefined,
+        permissions: profileData.role === 'admin' ? DEFAULT_PERMISSIONS.admin : DEFAULT_PERMISSIONS.streaming,
+        createdBy: profileData.created_by,
+      };
+
+      this.currentUser = user;
+      
+      // Store in AsyncStorage for persistence
+      await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+      
+      return user;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
-
-    if (!user.isVerified) {
-      throw new Error('Please verify your email address before logging in. Check your inbox for the verification link.');
-    }
-
-    // In production, verify password hash here
-    user.lastLogin = new Date();
-    this.currentUser = user;
-    
-    // Store in AsyncStorage for persistence
-    await AsyncStorage.setItem('currentUser', JSON.stringify(user));
-    
-    return user;
   }
 
   async register(userData: RegisterRequest): Promise<{ success: boolean; message: string }> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // Validate input
+      if (!userData.name || !userData.email || !userData.password) {
+        throw new Error('Please fill in all required fields');
+      }
 
-    // Validate input
-    if (!userData.name || !userData.email || !userData.password) {
-      throw new Error('Please fill in all required fields');
+      if (userData.password !== userData.confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+
+      if (userData.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name,
+            role: 'streaming', // Default role for new registrations
+          },
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data.user) {
+        throw new Error('Registration failed - no user data received');
+      }
+
+      return {
+        success: true,
+        message: `We've sent a confirmation link to ${userData.email}. Please verify your email to complete registration.`
+      };
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
     }
-
-    if (userData.password !== userData.confirmPassword) {
-      throw new Error('Passwords do not match');
-    }
-
-    if (userData.password.length < 6) {
-      throw new Error('Password must be at least 6 characters long');
-    }
-
-    // Check if email already exists
-    if (this.users.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
-      throw new Error('An account with this email already exists');
-    }
-
-    // Create new user
-    const newUser: User = {
-      id: Date.now().toString(),
-      email: userData.email.toLowerCase(),
-      name: userData.name,
-      role: 'streaming', // Default role for new registrations
-      createdAt: new Date(),
-      isActive: true,
-      isVerified: false, // Requires email verification
-      permissions: DEFAULT_PERMISSIONS.streaming,
-    };
-
-    this.users.push(newUser);
-
-    // Simulate sending verification email
-    console.log(`Verification email sent to ${userData.email}`);
-    
-    return {
-      success: true,
-      message: `We've sent a confirmation link to ${userData.email}. Please verify to continue.`
-    };
-  }
-
-  async simulateEmailVerification(email: string): Promise<User> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const user = this.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    if (user.isVerified) {
-      throw new Error('Email is already verified');
-    }
-
-    user.isVerified = true;
-    return user;
   }
 
   async logout(): Promise<void> {
-    this.currentUser = null;
-    await AsyncStorage.removeItem('currentUser');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      this.currentUser = null;
+      await AsyncStorage.removeItem('currentUser');
+    }
   }
 
   async getCurrentUser(): Promise<User | null> {
-    if (this.currentUser) {
-      return this.currentUser;
-    }
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Session error:', error);
+        return null;
+      }
 
-    // Check AsyncStorage for existing session
-    const stored = await AsyncStorage.getItem('currentUser');
-    if (stored) {
-      this.currentUser = JSON.parse(stored);
-      return this.currentUser;
-    }
+      if (!session?.user) {
+        // Check AsyncStorage for cached user data
+        const stored = await AsyncStorage.getItem('currentUser');
+        if (stored) {
+          this.currentUser = JSON.parse(stored);
+          return this.currentUser;
+        }
+        return null;
+      }
 
-    return null;
+      // Fetch user profile from user_profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        return null;
+      }
+
+      if (!profileData) {
+        console.error('User profile not found');
+        return null;
+      }
+
+      // Construct User object
+      const user: User = {
+        id: session.user.id,
+        email: session.user.email!,
+        name: profileData.name,
+        role: profileData.role,
+        createdAt: new Date(session.user.created_at),
+        lastSignInAt: session.user.last_sign_in_at ? new Date(session.user.last_sign_in_at) : undefined,
+        isActive: profileData.is_active ?? true,
+        emailConfirmedAt: session.user.email_confirmed_at ? new Date(session.user.email_confirmed_at) : undefined,
+        permissions: profileData.role === 'admin' ? DEFAULT_PERMISSIONS.admin : DEFAULT_PERMISSIONS.streaming,
+        createdBy: profileData.created_by,
+      };
+
+      this.currentUser = user;
+      
+      // Store in AsyncStorage for persistence
+      await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+      
+      return user;
+    } catch (error) {
+      console.error('Get current user error:', error);
+      return null;
+    }
   }
 
   async createUser(userData: CreateUserRequest): Promise<User> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Create auth user first
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: userData.email,
+        password: userData.password,
+        email_confirm: true, // Auto-confirm for admin-created users
+        user_metadata: {
+          name: userData.name,
+          role: userData.role,
+        },
+      });
 
-    // Check if email already exists
-    if (this.users.some(u => u.email === userData.email)) {
-      throw new Error('Email already exists');
+      if (authError) {
+        throw new Error(authError.message);
+      }
+
+      if (!authData.user) {
+        throw new Error('Failed to create user');
+      }
+
+      // The user_profiles entry should be created automatically by the trigger
+      // Wait a moment and then fetch the profile
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Profile fetch error after creation:', profileError);
+        throw new Error('User created but profile not found');
+      }
+
+      const newUser: User = {
+        id: authData.user.id,
+        email: authData.user.email!,
+        name: profileData.name,
+        role: profileData.role,
+        createdAt: new Date(authData.user.created_at),
+        isActive: profileData.is_active ?? true,
+        emailConfirmedAt: authData.user.email_confirmed_at ? new Date(authData.user.email_confirmed_at) : undefined,
+        permissions: profileData.role === 'admin' ? DEFAULT_PERMISSIONS.admin : DEFAULT_PERMISSIONS.streaming,
+        createdBy: this.currentUser?.id,
+      };
+
+      return newUser;
+    } catch (error) {
+      console.error('Create user error:', error);
+      throw error;
     }
-
-    const newUser: User = {
-      id: Date.now().toString(),
-      email: userData.email,
-      name: userData.name,
-      role: userData.role,
-      createdAt: new Date(),
-      isActive: true,
-      permissions: userData.role === 'admin' ? DEFAULT_PERMISSIONS.admin : DEFAULT_PERMISSIONS.streaming,
-      createdBy: this.currentUser?.id,
-    };
-
-    this.users.push(newUser);
-    return newUser;
   }
 
   async updateUser(userId: string, updates: Partial<User>): Promise<User> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update({
+          name: updates.name,
+          role: updates.role,
+          is_active: updates.isActive,
+        })
+        .eq('id', userId)
+        .select()
+        .single();
 
-    const userIndex = this.users.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-      throw new Error('User not found');
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Fetch the updated user data
+      const { data: authData } = await supabase.auth.admin.getUserById(userId);
+      
+      if (!authData.user) {
+        throw new Error('User not found');
+      }
+
+      const updatedUser: User = {
+        id: authData.user.id,
+        email: authData.user.email!,
+        name: data.name,
+        role: data.role,
+        createdAt: new Date(authData.user.created_at),
+        lastSignInAt: authData.user.last_sign_in_at ? new Date(authData.user.last_sign_in_at) : undefined,
+        isActive: data.is_active ?? true,
+        emailConfirmedAt: authData.user.email_confirmed_at ? new Date(authData.user.email_confirmed_at) : undefined,
+        permissions: data.role === 'admin' ? DEFAULT_PERMISSIONS.admin : DEFAULT_PERMISSIONS.streaming,
+        createdBy: data.created_by,
+      };
+
+      return updatedUser;
+    } catch (error) {
+      console.error('Update user error:', error);
+      throw error;
     }
-
-    this.users[userIndex] = { ...this.users[userIndex], ...updates };
-    return this.users[userIndex];
   }
 
   async deleteUser(userId: string): Promise<void> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const userIndex = this.users.findIndex(u => u.id === userId);
-    if (userIndex === -1) {
-      throw new Error('User not found');
+    try {
+      // Delete from auth (this should cascade to user_profiles due to foreign key)
+      const { error } = await supabase.auth.admin.deleteUser(userId);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+    } catch (error) {
+      console.error('Delete user error:', error);
+      throw error;
     }
-
-    this.users.splice(userIndex, 1);
   }
 
   async getAllUsers(): Promise<User[]> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    return [...this.users];
+    try {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (profilesError) {
+        throw new Error(profilesError.message);
+      }
+
+      const users: User[] = [];
+
+      for (const profile of profilesData) {
+        try {
+          const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
+          
+          if (authData.user) {
+            users.push({
+              id: authData.user.id,
+              email: authData.user.email!,
+              name: profile.name,
+              role: profile.role,
+              createdAt: new Date(authData.user.created_at),
+              lastSignInAt: authData.user.last_sign_in_at ? new Date(authData.user.last_sign_in_at) : undefined,
+              isActive: profile.is_active ?? true,
+              emailConfirmedAt: authData.user.email_confirmed_at ? new Date(authData.user.email_confirmed_at) : undefined,
+              permissions: profile.role === 'admin' ? DEFAULT_PERMISSIONS.admin : DEFAULT_PERMISSIONS.streaming,
+              createdBy: profile.created_by,
+            });
+          }
+        } catch (error) {
+          console.error(`Error fetching auth data for user ${profile.id}:`, error);
+        }
+      }
+
+      return users;
+    } catch (error) {
+      console.error('Get all users error:', error);
+      throw error;
+    }
   }
 }
 
