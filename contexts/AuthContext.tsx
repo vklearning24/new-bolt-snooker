@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { User, AuthState, LoginCredentials, CreateUserRequest, RegisterRequest } from '@/types/auth';
 import { authService } from '@/services/authService';
+import { supabase } from '@/lib/supabase';
+import { Alert } from 'react-native';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -83,6 +85,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     checkExistingSession();
+
+    // Listen for auth state changes (including email verification)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Check if user just verified their email
+          if (session.user.email_confirmed_at && session.user.aud === 'authenticated') {
+            try {
+              const user = await authService.getCurrentUser();
+              if (user) {
+                dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+              }
+            } catch (error) {
+              console.error('Error after email verification:', error);
+            }
+          }
+        } else if (event === 'SIGNED_OUT') {
+          dispatch({ type: 'LOGOUT' });
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (credentials: LoginCredentials) => {

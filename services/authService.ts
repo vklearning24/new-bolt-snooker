@@ -22,6 +22,8 @@ class AuthService {
 
       // Check if email is confirmed
       if (!data.user.email_confirmed_at) {
+        // Sign out the unverified user
+        await supabase.auth.signOut();
         throw new Error('Please verify your email address before logging in. Check your inbox for the verification link.');
       }
 

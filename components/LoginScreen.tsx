@@ -5,6 +5,7 @@ import { User, Lock, Eye, EyeOff, Zap, Shield, Mail, Phone, UserPlus } from 'luc
 import Animated, { FadeInUp, SlideInDown } from 'react-native-reanimated';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoginCredentials, RegisterRequest } from '@/types/auth';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -18,6 +19,33 @@ export default function LoginScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState<{ success: boolean; message: string } | null>(null);
   const { login, register, isLoading, error } = useAuth();
+
+  useEffect(() => {
+    // Handle deep links from email verification
+    const handleAuthStateChange = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user?.email_confirmed_at) {
+          // User just verified their email via link
+          Alert.alert(
+            'Email Verified Successfully!',
+            'Your email has been verified. You can now log in with your credentials.',
+            [
+              {
+                text: 'OK',
+                onPress: async () => {
+                  // Sign out so user can log in normally
+                  await supabase.auth.signOut();
+                  setIsRegistering(false); // Switch to login tab
+                }
+              }
+            ]
+          );
+        }
+      }
+    );
+
+    return () => handleAuthStateChange.data.subscription.unsubscribe();
+  }, []);
 
   // Email validation function
   const isValidEmail = (email: string): boolean => {
