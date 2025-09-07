@@ -24,7 +24,6 @@ export default function LoginScreen() {
   const isValidEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email.trim());
-  };
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
@@ -107,11 +106,6 @@ export default function LoginScreen() {
     } catch (error) {
       Alert.alert('Verification Failed', (error as Error).message);
     }
-  };
-
-  const fillDemoCredentials = () => {
-    setEmail('admin@example.com');
-    setPassword('admin123');
   };
 
   return (
@@ -298,21 +292,6 @@ export default function LoginScreen() {
                     </Text>
                   </TouchableOpacity>
                 </View>
-
-                {/* Demo Credentials - Only show for login */}
-                {!isRegistering && (
-                  <View style={styles.demoSection}>
-                    <Text style={styles.demoTitle}>Try Demo Account:</Text>
-                    <View style={styles.demoButtons}>
-                      <TouchableOpacity
-                        style={styles.demoButton}
-                        onPress={fillDemoCredentials}
-                      >
-                        <Text style={styles.demoButtonText}>Fill Demo Credentials</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
               </>
             )}
           </Animated.View>
@@ -472,34 +451,6 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  demoSection: {
-    marginTop: 24,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-  },
-  demoTitle: {
-    color: '#B0BEC5',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  demoButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  demoButton: {
-    backgroundColor: '#3C3C3E',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  demoButtonText: {
-    color: '#40E0D0',
-    fontSize: 14,
     fontWeight: '600',
   },
 });
