@@ -61,3 +61,20 @@ export const DEFAULT_PERMISSIONS = {
     { id: 'user_management', name: 'User Management', description: 'Create and manage user accounts', category: 'admin' },
   ]
 } as const;
+
+// types/auth.ts
+export type Role = 'admin' | 'streaming';
+
+// types/auth.ts
+export const DEFAULT_PERMISSIONS = {
+  'users.invite': {
+    id: 'users.invite',
+    name: 'Invite Users',
+    description: 'Can invite new users to the workspace',
+    category: 'users',
+  },
+  // add more permissions here…
+} as const;
+
+export type PermissionId = keyof typeof DEFAULT_PERMISSIONS;
+export type Permission = typeof DEFAULT_PERMISSIONS[PermissionId];
