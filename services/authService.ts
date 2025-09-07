@@ -3,8 +3,21 @@ import { LEGACY_ROLE_PERMISSIONS } from '@/types/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+
 class AuthService {
   private currentUser: User | null = null;
+
+  private async getAuthHeaders() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('No valid session found');
+    }
+    return {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    };
+  }
 
   async login(credentials: LoginCredentials): Promise<User> {
     try {
@@ -192,53 +205,34 @@ class AuthService {
 
   async createUser(userData: CreateUserRequest): Promise<User> {
     try {
-      // Create auth user first
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: userData.email,
-        password: userData.password,
-        email_confirm: true, // Auto-confirm for admin-created users
-        user_metadata: {
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          email: userData.email,
+          password: userData.password,
           name: userData.name,
           role: userData.role,
-        },
+        }),
       });
 
-      if (authError) {
-        throw new Error(authError.message);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create user');
       }
 
-      if (!authData.user) {
-        throw new Error('Failed to create user');
-      }
-
-      // The user_profiles entry should be created automatically by the trigger
-      // Wait a moment and then fetch the profile
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single();
-
-      if (profileError) {
-        console.error('Profile fetch error after creation:', profileError);
-        throw new Error('User created but profile not found');
-      }
-
-      const newUser: User = {
-        id: authData.user.id,
-        email: authData.user.email!,
-        name: profileData.name,
-        role: profileData.role,
-        createdAt: new Date(authData.user.created_at),
-        isActive: profileData.is_active ?? true,
-        emailConfirmedAt: authData.user.email_confirmed_at ? new Date(authData.user.email_confirmed_at) : undefined,
-        permissions: profileData.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : LEGACY_ROLE_PERMISSIONS.streaming,
-        createdBy: this.currentUser?.id,
+      const userData = await response.json();
+      return {
+        ...userData,
+        createdAt: new Date(userData.createdAt),
+        lastSignInAt: userData.lastSignInAt ? new Date(userData.lastSignInAt) : undefined,
+        emailConfirmedAt: userData.emailConfirmedAt ? new Date(userData.emailConfirmedAt) : undefined,
+        permissions: userData.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : 
+                    userData.role === 'editor' ? LEGACY_ROLE_PERMISSIONS.editor :
+                    userData.role === 'moderator' ? LEGACY_ROLE_PERMISSIONS.moderator :
+                    LEGACY_ROLE_PERMISSIONS.streaming,
       };
-
-      return newUser;
     } catch (error) {
       console.error('Create user error:', error);
       throw error;
@@ -247,68 +241,33 @@ class AuthService {
 
   async updateUser(userId: string, updates: Partial<User>): Promise<User> {
     try {
-      // Check if this is a self-update that would remove admin privileges
-      if (this.currentUser && this.currentUser.id === userId) {
-        const isCurrentlyAdmin = this.currentUser.role === 'admin';
-        const wouldRemoveAdmin = updates.role && updates.role !== 'admin';
-        const wouldDeactivate = updates.isActive === false;
-        
-        if (isCurrentlyAdmin && (wouldRemoveAdmin || wouldDeactivate)) {
-          // Check if this user is the last admin
-          const { data: isLastAdmin, error: checkError } = await supabase
-            .rpc('is_last_admin', { user_id: userId });
-          
-          if (checkError) {
-            console.error('Error checking last admin status:', checkError);
-            throw new Error('Unable to verify admin status');
-          }
-          
-          if (isLastAdmin) {
-            throw new Error('Cannot remove admin privileges or deactivate the last admin account');
-          }
-        }
-      }
-
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .update({
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users/${userId}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({
           name: updates.name,
           role: updates.role,
-          is_active: updates.isActive,
-        })
-        .eq('id', userId)
-        .select()
-        .single();
+          isActive: updates.isActive,
+        }),
+      });
 
-      if (error) {
-        throw new Error(error.message);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update user');
       }
 
-      // Fetch the updated user data
-      const { data: authData } = await supabase.auth.admin.getUserById(userId);
-      
-      if (!authData.user) {
-        throw new Error('User not found');
-      }
-
-      const updatedUser: User = {
-        id: authData.user.id,
-        email: authData.user.email!,
-        name: data.name,
-        role: data.role,
-        createdAt: new Date(authData.user.created_at),
-        lastSignInAt: authData.user.last_sign_in_at ? new Date(authData.user.last_sign_in_at) : undefined,
-        isActive: data.is_active ?? true,
-        emailConfirmedAt: authData.user.email_confirmed_at ? new Date(authData.user.email_confirmed_at) : undefined,
-        permissions: data.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : LEGACY_ROLE_PERMISSIONS.streaming,
-        permissions: data.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : 
-                    data.role === 'editor' ? LEGACY_ROLE_PERMISSIONS.editor :
-                    data.role === 'moderator' ? LEGACY_ROLE_PERMISSIONS.moderator :
+      const userData = await response.json();
+      return {
+        ...userData,
+        createdAt: new Date(userData.createdAt),
+        lastSignInAt: userData.lastSignInAt ? new Date(userData.lastSignInAt) : undefined,
+        emailConfirmedAt: userData.emailConfirmedAt ? new Date(userData.emailConfirmedAt) : undefined,
+        permissions: userData.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : 
+                    userData.role === 'editor' ? LEGACY_ROLE_PERMISSIONS.editor :
+                    userData.role === 'moderator' ? LEGACY_ROLE_PERMISSIONS.moderator :
                     LEGACY_ROLE_PERMISSIONS.streaming,
-        createdBy: data.created_by,
       };
-
-      return updatedUser;
     } catch (error) {
       console.error('Update user error:', error);
       throw error;
@@ -317,11 +276,15 @@ class AuthService {
 
   async deleteUser(userId: string): Promise<void> {
     try {
-      // Delete from auth (this should cascade to user_profiles due to foreign key)
-      const { error } = await supabase.auth.admin.deleteUser(userId);
-      
-      if (error) {
-        throw new Error(error.message);
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users/${userId}`, {
+        method: 'DELETE',
+        headers,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete user');
       }
     } catch (error) {
       console.error('Delete user error:', error);
@@ -331,44 +294,28 @@ class AuthService {
 
   async getAllUsers(): Promise<User[]> {
     try {
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
+        method: 'GET',
+        headers,
+      });
 
-      if (profilesError) {
-        throw new Error(profilesError.message);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch users');
       }
 
-      const users: User[] = [];
-
-      for (const profile of profilesData) {
-        try {
-          const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
-          
-          if (authData.user) {
-            users.push({
-              id: authData.user.id,
-              email: authData.user.email!,
-              name: profile.name,
-              role: profile.role,
-              createdAt: new Date(authData.user.created_at),
-              lastSignInAt: authData.user.last_sign_in_at ? new Date(authData.user.last_sign_in_at) : undefined,
-              isActive: profile.is_active ?? true,
-              emailConfirmedAt: authData.user.email_confirmed_at ? new Date(authData.user.email_confirmed_at) : undefined,
-              permissions: profile.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : 
-                          profile.role === 'editor' ? LEGACY_ROLE_PERMISSIONS.editor :
-                          profile.role === 'moderator' ? LEGACY_ROLE_PERMISSIONS.moderator :
-                          LEGACY_ROLE_PERMISSIONS.streaming,
-              createdBy: profile.created_by,
-            });
-          }
-        } catch (error) {
-          console.error(`Error fetching auth data for user ${profile.id}:`, error);
-        }
-      }
-
-      return users;
+      const usersData = await response.json();
+      return usersData.map((userData: any) => ({
+        ...userData,
+        createdAt: new Date(userData.createdAt),
+        lastSignInAt: userData.lastSignInAt ? new Date(userData.lastSignInAt) : undefined,
+        emailConfirmedAt: userData.emailConfirmedAt ? new Date(userData.emailConfirmedAt) : undefined,
+        permissions: userData.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : 
+                    userData.role === 'editor' ? LEGACY_ROLE_PERMISSIONS.editor :
+                    userData.role === 'moderator' ? LEGACY_ROLE_PERMISSIONS.moderator :
+                    LEGACY_ROLE_PERMISSIONS.streaming,
+      }));
     } catch (error) {
       console.error('Get all users error:', error);
       throw error;
@@ -377,21 +324,18 @@ class AuthService {
 
   async getAuditLogs(): Promise<any[]> {
     try {
-      const { data, error } = await supabase
-        .from('role_audit_logs')
-        .select(`
-          *,
-          changed_user:user_profiles!changed_user_id(name, email),
-          changed_by:user_profiles!changed_by_user_id(name, email)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-audit-logs`, {
+        method: 'GET',
+        headers,
+      });
 
-      if (error) {
-        throw new Error(error.message);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch audit logs');
       }
 
-      return data || [];
+      return await response.json();
     } catch (error) {
       console.error('Get audit logs error:', error);
       throw error;
