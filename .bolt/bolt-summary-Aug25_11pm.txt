@@ -1,0 +1,59 @@
+The Plan
+Modify app/(tabs)/stream.tsx:
+Add Imports: Import PanGestureHandler from react-native-gesture-handler and useAnimatedGestureHandler, runOnJS from react-native-reanimated.
+Initialize Shared Values: Declare scoreboardOffsetX and scoreboardOffsetY using useSharedValue to store the scoreboard's pixel coordinates.
+Define calculateInitialScoreboardPosition: Create a useCallback function to compute the scoreboard's initial x and y pixel positions based on the selected scoreboardPosition (top, bottom, left, right), current dimensions, and whether the showSettingsPopup is active (which affects vertical offset). This function will update scoreboardOffsetX.value and scoreboardOffsetY.value.
+Update Position on State Change: Use a useEffect hook to call calculateInitialScoreboardPosition whenever scoreboardPosition, dimensions, or showSettingsPopup changes, ensuring the scoreboard snaps to the correct preset position or adjusts for the settings panel.
+Implement Pan Gesture Handler: Define panGestureHandler using useAnimatedGestureHandler.
+onStart: Store the current scoreboardOffsetX.value and scoreboardOffsetY.value as context.
+onActive: Update scoreboardOffsetX.value and scoreboardOffsetY.value by adding the gesture's translationX and translationY to the stored start positions.
+onEnd: Call runOnJS to execute a JavaScript function (handleScoreboardPositionChange) that updates the draggableScoreboardPosition state with the new percentage-based x and y coordinates. This will persist the dragged position.
+Update scoreboardAnimatedStyle: Modify the scoreboardAnimatedStyle to directly use translateX: scoreboardOffsetX.value and translateY: scoreboardOffsetY.value.
+Refine Scoreboard Container Style: Rename styles.scoreboardContainer to styles.scoreboardContainerBase and simplify its properties to only include position: 'absolute' and zIndex.
+Remove Old Positioning Logic: Delete the getScoreboardStyle function and the scoreboardTranslateY shared value, as their functionality is now integrated into the new system.
+Pass Props to BroadcastScoreboard: Update the BroadcastScoreboard component to receive isDraggable={showSettingsPopup} and onPositionChange={handleScoreboardPositionChange}.
+This will enable dragging the scoreboard when the settings panel is open, allowing for precise, real-time positioning.
+
+Implement Draggable Scoreboard
+
+Undo
+
+app/(tabs)/stream.tsx
+components/BroadcastScoreboard.tsx
+I've implemented the changes to make the scoreboard draggable during the live stream when the settings panel is open.
+
+✅ Changes Made:
+app/(tabs)/stream.tsx:
+Imports Added:
+
+PanGestureHandler from react-native-gesture-handler
+useAnimatedGestureHandler, runOnJS from react-native-reanimated
+Shared Values Initialized:
+
+scoreboardOffsetX = useSharedValue(0) and scoreboardOffsetY = useSharedValue(0) were added to manage the scoreboard's pixel position.
+calculateInitialScoreboardPosition Function:
+
+A useCallback function was created to calculate the initial pixel x and y coordinates for the scoreboard based on scoreboardPosition, dimensions, and showSettingsPopup. This function ensures the scoreboard snaps to preset positions and adjusts its vertical alignment when the settings panel is open.
+useEffect for Position Updates:
+
+A useEffect hook was added to call calculateInitialScoreboardPosition whenever relevant state changes, ensuring the scoreboard's position is always up-to-date.
+Pan Gesture Handler Implemented:
+
+The BroadcastScoreboard component is now wrapped with PanGestureHandler.
+useAnimatedGestureHandler is used to define onStart (to store initial position) and onActive (to update position during drag).
+onEnd uses runOnJS to call handleScoreboardPositionChange (which updates the draggableScoreboardPosition state) after the drag gesture finishes.
+The enabled prop of PanGestureHandler is set to showSettingsPopup, allowing dragging only when the settings panel is visible.
+scoreboardAnimatedStyle Updated:
+
+The scoreboardAnimatedStyle now directly uses translateX: scoreboardOffsetX.value and translateY: scoreboardOffsetY.value for positioning.
+Old Positioning Logic Removed:
+
+The getScoreboardStyle function and the scoreboardTranslateY shared value have been removed, as their functionality is now handled by the new dynamic positioning system.
+BroadcastScoreboard Props Updated:
+
+BroadcastScoreboard now receives isDraggable={showSettingsPopup} to control its internal drag indicator visibility.
+It also receives onPositionChange={handleScoreboardPositionChange} to update the state with the new percentage-based position after dragging.
+components/BroadcastScoreboard.tsx:
+isDraggable Prop:
+The BroadcastScoreboard component now accepts an isDraggable prop, which controls the visibility of the drag indicator.
+You can now open the live stream tab, open the settings panel, and drag the scoreboard around the screen. The position will persist even after closing and reopening the settings panel.
