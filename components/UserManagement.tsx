@@ -158,6 +158,13 @@ export default function UserManagement() {
           <View style={styles.searchContainer}>
             <Search size={20} color="#666" />
             <TextInput
+              style={styles.searchInput}
+              placeholder="Search users..."
+              placeholderTextColor="#666"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={styles.addButton}
@@ -165,14 +172,6 @@ export default function UserManagement() {
             >
               <Plus size={20} color="#fff" />
               <Text style={styles.addButtonText}>Add User</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.auditButton}
-              onPress={() => setShowAuditLogs(true)}
-            >
-              <History size={20} color="#fff" />
-              <Text style={styles.auditButtonText}>Audit Logs</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
