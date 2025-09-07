@@ -93,3 +93,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, PermissionId[]> = {
 // types/auth.ts
 export const getPermissionsForRole = (role: Role): PermissionId[] =>
   DEFAULT_ROLE_PERMISSIONS[role] ?? [];
+
+// types/auth.ts
+export interface AppUser {
+  id: string;
+  email: string;
+  role: Role;            // must be 'admin' | 'streaming'
+  permissions?: string[]; // optional per-user extras (if you support overrides)
+}
