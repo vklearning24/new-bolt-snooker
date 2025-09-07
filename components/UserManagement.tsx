@@ -158,21 +158,23 @@ export default function UserManagement() {
           <View style={styles.searchContainer}>
             <Search size={20} color="#666" />
             <TextInput
-              style={styles.searchInput}
-              placeholder="Search users..."
-              placeholderTextColor="#666"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowCreateForm(true)}
+            >
+              <Plus size={20} color="#fff" />
+              <Text style={styles.addButtonText}>Add User</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.auditButton}
+              onPress={() => setShowAuditLogs(true)}
+            >
+              <History size={20} color="#fff" />
+              <Text style={styles.auditButtonText}>Audit Logs</Text>
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowCreateForm(true)}
-          >
-            <Plus size={20} color="#fff" />
-            <Text style={styles.addButtonText}>Add User</Text>
-          </TouchableOpacity>
         </Animated.View>
 
         {/* Create/Edit User Form */}
@@ -390,7 +392,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
   addButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

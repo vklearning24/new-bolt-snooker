@@ -2,7 +2,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'streaming' | 'admin';
+  role: 'streaming' | 'admin' | 'editor' | 'moderator';
   createdAt: Date;
   lastSignInAt?: Date;
   isActive: boolean;
@@ -34,7 +34,7 @@ export interface CreateUserRequest {
   email: string;
   name: string;
   password: string;
-  role: 'streaming' | 'admin';
+  role: 'streaming' | 'admin' | 'editor' | 'moderator';
   permissions: string[];
 }
 
@@ -52,6 +52,17 @@ export const LEGACY_ROLE_PERMISSIONS = {
     { id: 'setup_access', name: 'Setup Access', description: 'Access to setup configuration', category: 'setup' },
     { id: 'stream_control', name: 'Stream Control', description: 'Control live streaming', category: 'streaming' },
   ],
+  editor: [
+    { id: 'setup_access', name: 'Setup Access', description: 'Access to setup configuration', category: 'setup' },
+    { id: 'stream_control', name: 'Stream Control', description: 'Control live streaming', category: 'streaming' },
+    { id: 'scoreboard_manage', name: 'Scoreboard Management', description: 'Manage scoreboard and scores', category: 'scoreboard' },
+    { id: 'moments_control', name: 'Moments Control', description: 'Trigger and manage special moments', category: 'moments' },
+  ],
+  moderator: [
+    { id: 'setup_access', name: 'Setup Access', description: 'Access to setup configuration', category: 'setup' },
+    { id: 'stream_control', name: 'Stream Control', description: 'Control live streaming', category: 'streaming' },
+    { id: 'scoreboard_manage', name: 'Scoreboard Management', description: 'Manage scoreboard and scores', category: 'scoreboard' },
+  ],
   admin: [
     { id: 'setup_access', name: 'Setup Access', description: 'Access to setup configuration', category: 'setup' },
     { id: 'stream_control', name: 'Stream Control', description: 'Control live streaming', category: 'streaming' },
@@ -63,7 +74,7 @@ export const LEGACY_ROLE_PERMISSIONS = {
 } as const;
 
 // types/auth.ts
-export type Role = 'admin' | 'streaming';
+export type Role = 'admin' | 'streaming' | 'editor' | 'moderator';
 
 // types/auth.ts
 export const DEFAULT_PERMISSIONS = {
@@ -72,6 +83,18 @@ export const DEFAULT_PERMISSIONS = {
     name: 'Invite Users',
     description: 'Can invite new users to the workspace',
     category: 'users',
+  },
+  'users.manage': {
+    id: 'users.manage',
+    name: 'Manage Users',
+    description: 'Can create, update, and delete user accounts',
+    category: 'users',
+  },
+  'roles.assign': {
+    id: 'roles.assign',
+    name: 'Assign Roles',
+    description: 'Can assign and modify user roles',
+    category: 'admin',
   },
   // add more permissions here…
 } as const;
@@ -83,7 +106,15 @@ export type Permission = typeof DEFAULT_PERMISSIONS[PermissionId];
 export const DEFAULT_ROLE_PERMISSIONS: Record<Role, PermissionId[]> = {
   admin: [
     'users.invite',
+    'users.manage',
+    'roles.assign',
     // other admin permissions…
+  ],
+  editor: [
+    'users.invite',
+  ],
+  moderator: [
+    // moderator permissions
   ],
   streaming: [
     // add only what streamers should have

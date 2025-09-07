@@ -247,6 +247,28 @@ class AuthService {
 
   async updateUser(userId: string, updates: Partial<User>): Promise<User> {
     try {
+      // Check if this is a self-update that would remove admin privileges
+      if (this.currentUser && this.currentUser.id === userId) {
+        const isCurrentlyAdmin = this.currentUser.role === 'admin';
+        const wouldRemoveAdmin = updates.role && updates.role !== 'admin';
+        const wouldDeactivate = updates.isActive === false;
+        
+        if (isCurrentlyAdmin && (wouldRemoveAdmin || wouldDeactivate)) {
+          // Check if this user is the last admin
+          const { data: isLastAdmin, error: checkError } = await supabase
+            .rpc('is_last_admin', { user_id: userId });
+          
+          if (checkError) {
+            console.error('Error checking last admin status:', checkError);
+            throw new Error('Unable to verify admin status');
+          }
+          
+          if (isLastAdmin) {
+            throw new Error('Cannot remove admin privileges or deactivate the last admin account');
+          }
+        }
+      }
+
       const { data, error } = await supabase
         .from('user_profiles')
         .update({
@@ -279,6 +301,10 @@ class AuthService {
         isActive: data.is_active ?? true,
         emailConfirmedAt: authData.user.email_confirmed_at ? new Date(authData.user.email_confirmed_at) : undefined,
         permissions: data.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : LEGACY_ROLE_PERMISSIONS.streaming,
+        permissions: data.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : 
+                    data.role === 'editor' ? LEGACY_ROLE_PERMISSIONS.editor :
+                    data.role === 'moderator' ? LEGACY_ROLE_PERMISSIONS.moderator :
+                    LEGACY_ROLE_PERMISSIONS.streaming,
         createdBy: data.created_by,
       };
 
@@ -330,7 +356,10 @@ class AuthService {
               lastSignInAt: authData.user.last_sign_in_at ? new Date(authData.user.last_sign_in_at) : undefined,
               isActive: profile.is_active ?? true,
               emailConfirmedAt: authData.user.email_confirmed_at ? new Date(authData.user.email_confirmed_at) : undefined,
-              permissions: profile.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : LEGACY_ROLE_PERMISSIONS.streaming,
+              permissions: profile.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : 
+                          profile.role === 'editor' ? LEGACY_ROLE_PERMISSIONS.editor :
+                          profile.role === 'moderator' ? LEGACY_ROLE_PERMISSIONS.moderator :
+                          LEGACY_ROLE_PERMISSIONS.streaming,
               createdBy: profile.created_by,
             });
           }
@@ -345,6 +374,28 @@ class AuthService {
       throw error;
     }
   }
+
+  async getAuditLogs(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('role_audit_logs')
+        .select(`
+          *,
+          changed_user:user_profiles!changed_user_id(name, email),
+          changed_by:user_profiles!changed_by_user_id(name, email)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        throw new Error(error.message);
+      }
 }
 
+      return data || [];
+    } catch (error) {
+      console.error('Get audit logs error:', error);
+      throw error;
+    }
+  }
 export const authService = new AuthService();

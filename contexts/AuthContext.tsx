@@ -12,9 +12,12 @@ interface AuthContextType extends AuthState {
   updateUser: (userId: string, updates: Partial<User>) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   getAllUsers: () => Promise<User[]>;
+  getAuditLogs: () => Promise<any[]>;
   hasPermission: (permissionId: string) => boolean;
   isAdmin: () => boolean;
   isStreamer: () => boolean;
+  isEditor: () => boolean;
+  isModerator: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -167,6 +170,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return authService.getAllUsers();
   };
 
+  const getAuditLogs = async () => {
+    if (!state.user || state.user.role !== 'admin') {
+      throw new Error('Only admin users can view audit logs');
+    }
+    return authService.getAuditLogs();
+  };
   const hasPermission = (permissionId: string): boolean => {
     if (!state.user) return false;
     return state.user.permissions.some(p => p.id === permissionId);
@@ -180,6 +189,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return state.user?.role === 'streaming' || false;
   };
 
+  const isEditor = (): boolean => {
+    return state.user?.role === 'editor' || false;
+  };
   return (
     <AuthContext.Provider
       value={{
@@ -191,9 +203,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updateUser,
         deleteUser,
         getAllUsers,
+        getAuditLogs,
         hasPermission,
         isAdmin,
         isStreamer,
+        isEditor,
+        isModerator,
       }}
     >
       {children}
@@ -209,3 +224,6 @@ export function useAuth() {
   return context;
 }
 
+  const isModerator = (): boolean => {
+    return state.user?.role === 'moderator' || false;
+  };
