@@ -390,7 +390,6 @@ class AuthService {
       if (error) {
         throw new Error(error.message);
       }
-}
 
       return data || [];
     } catch (error) {
