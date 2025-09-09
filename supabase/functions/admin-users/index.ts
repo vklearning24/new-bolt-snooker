@@ -72,9 +72,10 @@ Deno.serve(async (req) => {
 
     const url = new URL(req.url);
     const method = req.method;
+    const pathSegments = url.pathname.split('/').filter(segment => segment.length > 0);
 
     // Handle different operations
-    if (method === 'GET' && url.pathname.endsWith('/users')) {
+    if (method === 'GET' && pathSegments.length === 2 && pathSegments[0] === 'admin-users' && pathSegments[1] === 'users') {
       // Get all users
       const { data: profilesData, error: profilesError } = await supabaseAdmin
         .from('user_profiles')
@@ -113,7 +114,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (method === 'POST' && url.pathname.endsWith('/users')) {
+    if (method === 'POST' && pathSegments.length === 2 && pathSegments[0] === 'admin-users' && pathSegments[1] === 'users') {
       // Create user
       const body = await req.json();
       const { email, password, name, role } = body;
@@ -171,9 +172,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (method === 'PUT' && url.pathname.includes('/users/')) {
+    if (method === 'PUT' && pathSegments.length === 3 && pathSegments[0] === 'admin-users' && pathSegments[1] === 'users') {
       // Update user
-      const userId = url.pathname.split('/').pop();
+      const userId = pathSegments[2];
       const body = await req.json();
       const { name, role, isActive } = body;
       
@@ -242,9 +243,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (method === 'DELETE' && url.pathname.includes('/users/')) {
+    if (method === 'DELETE' && pathSegments.length === 3 && pathSegments[0] === 'admin-users' && pathSegments[1] === 'users') {
       // Delete user
-      const userId = url.pathname.split('/').pop();
+      const userId = pathSegments[2];
       
       // Contributor-specific restriction for user deletion
       if (callerRole === 'contributor') {
