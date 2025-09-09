@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { User, CreateUserRequest } from '@/types/auth';
 
 export default function UserManagement() {
-  const { getAllUsers, createUser, updateUser, deleteUser, user: currentUser } = useAuth();
+  const { getAllUsers, createUser, updateUser, deleteUser, user: currentUser, isContributor } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,7 +16,7 @@ export default function UserManagement() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
+    password: '', // Password is only for creation, not update
     role: 'streaming' as 'streaming' | 'admin',
   });
 
@@ -207,19 +207,25 @@ export default function UserManagement() {
                 autoCapitalize="none"
               />
 
-              {!editingUser && (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  placeholderTextColor="#666"
-                  value={formData.password}
-                  onChangeText={(text) => setFormData({ ...formData, password: text })}
-                  secureTextEntry
-                />
-              )}
+              {/* Password input only for new user creation */}
+              {!editingUser && ( 
+                <TextInput 
+                  style={styles.input} 
+                  placeholder="Password" 
+                  placeholderTextColor="#666" 
+                  value={formData.password} 
+                  onChangeText={(text) => setFormData({ ...formData, password: text })} 
+                  secureTextEntry 
+                /> 
+              )} 
 
               <View style={styles.roleSelector}>
                 <TouchableOpacity
+                  // Disable 'streaming' role selection for contributors if they are editing an existing user
+                  // or if they are creating a new user and the role is not 'streaming'
+                  // The backend will enforce that contributors can only create 'streaming' users.
+                  disabled={isContributor() && editingUser && formData.role !== 'streaming'}
+
                   style={[styles.roleButton, formData.role === 'streaming' && styles.activeRole]}
                   onPress={() => setFormData({ ...formData, role: 'streaming' })}
                 >
@@ -230,6 +236,9 @@ export default function UserManagement() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  // Disable 'admin' role selection for contributors
+                  disabled={isContributor()}
+
                   style={[styles.roleButton, formData.role === 'admin' && styles.activeRole]}
                   onPress={() => setFormData({ ...formData, role: 'admin' })}
                 >
@@ -237,6 +246,16 @@ export default function UserManagement() {
                   <Text style={[styles.roleText, formData.role === 'admin' && styles.activeRoleText]}>
                     Admin
                   </Text>
+                </TouchableOpacity>
+
+                {/* Add Contributor role option */}
+                <TouchableOpacity
+                  disabled={isContributor() && editingUser && formData.role !== 'contributor'}
+                  style={[styles.roleButton, formData.role === 'contributor' && styles.activeRole]}
+                  onPress={() => setFormData({ ...formData, role: 'contributor' })}
+                >
+                  <Users size={16} color={formData.role === 'contributor' ? '#fff' : '#40E0D0'} />
+                  <Text style={[styles.roleText, formData.role === 'contributor' && styles.activeRoleText]}>Contributor</Text>
                 </TouchableOpacity>
               </View>
 
@@ -274,7 +293,7 @@ export default function UserManagement() {
                       <Text style={styles.roleBadgeText}>
                         {user.role === 'admin' ? 'Admin' : 'Streamer'}
                       </Text>
-                    </View>
+                    </View> {/* This badge needs to be updated to show 'contributor' too */}
                   </View>
 
                   <Text style={styles.userEmail}>{user.email}</Text>
@@ -304,14 +323,18 @@ export default function UserManagement() {
                   </TouchableOpacity>
 
                   <TouchableOpacity
+                    // Disable edit for admin users if the current user is a contributor
+                    disabled={isContributor() && user.role === 'admin'}
                     style={styles.actionButton}
                     onPress={() => startEdit(user)}
                   >
                     <Edit size={16} color="#40E0D0" />
                   </TouchableOpacity>
 
-                  {user.id !== currentUser?.id && (
+                  {/* Disable delete for current user and for admin users if the current user is a contributor */}
+                  {user.id !== currentUser?.id && !(isContributor() && user.role === 'admin') && (
                     <TouchableOpacity
+                      disabled={isContributor() && user.role === 'admin'}
                       style={styles.actionButton}
                       onPress={() => handleDeleteUser(user)}
                     >

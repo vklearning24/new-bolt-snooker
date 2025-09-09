@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoginScreen from '@/components/LoginScreen';
 
 export default function TabLayout() {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, isContributor } = useAuth();
 
   if (!isAuthenticated) {
     return <LoginScreen />;
@@ -47,7 +47,7 @@ export default function TabLayout() {
       />
       
       {/* Admin-only tabs */}
-      {isAdmin() && (
+      {(isAdmin() || isContributor()) && (
         <>
           <Tabs.Screen
             name="scoreboard"
