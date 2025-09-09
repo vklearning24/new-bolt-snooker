@@ -293,7 +293,7 @@ export default function UserManagement() {
                       <Text style={styles.roleBadgeText}>
                         {user.role === 'admin' ? 'Admin' : 'Streamer'}
                       </Text>
-                    </View> {/* This badge needs to be updated to show 'contributor' too */}
+                    </View> {/* This badge needs to be updated to show 'contributor\' too */}
                   </View>
 
                   <Text style={styles.userEmail}>{user.email}</Text>
