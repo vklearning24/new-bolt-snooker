@@ -17,7 +17,6 @@ interface AuthContextType extends AuthState {
   isAdmin: () => boolean;
   isStreamer: () => boolean;
   isContributor: () => boolean;
-  isContributor: () => boolean;
   isEditor: () => boolean;
   isModerator: () => boolean;
 }
@@ -123,15 +122,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       dispatch({ type: 'LOGIN_ERROR', payload: (error as Error).message });
       throw error;
+    }
+  };
+
+  const register = async (userData: RegisterRequest) => {
+    dispatch({ type: 'LOGIN_START' });
+    try {
+      const result = await authService.register(userData);
       dispatch({ type: 'CLEAR_ERROR' });
       return result;
     } catch (error) {
       dispatch({ type: 'LOGIN_ERROR', payload: (error as Error).message });
+      throw error;
     }
+  };
+
+  const logout = () => {
+    authService.logout();
+    dispatch({ type: 'LOGOUT' });
+  };
+
+  const createUser = async (userData: CreateUserRequest) => {
     return authService.createUser(userData);
   };
 
   const updateUser = async (userId: string, updates: Partial<User>) => {
+    return authService.updateUser(userId, updates);
+  };
+
+  const deleteUser = async (userId: string) => {
     return authService.deleteUser(userId);
   };
 
@@ -145,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     return authService.getAuditLogs();
   };
+
   const hasPermission = (permissionId: string): boolean => {
     if (!state.user) return false;
     return state.user.permissions.some(p => p.id === permissionId);
@@ -161,6 +181,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isEditor = (): boolean => {
     return state.user?.role === 'editor' || false;
   };
+
+  const isModerator = (): boolean => {
+    return state.user?.role === 'moderator' || false;
+  };
+
+  const isContributor = (): boolean => {
+    return state.user?.role === 'contributor' || false;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -175,8 +204,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         getAuditLogs,
         hasPermission,
         isAdmin,
-        isContributor,
         isStreamer,
+        isContributor,
         isEditor,
         isModerator,
       }}
@@ -185,6 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
+
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -192,10 +222,3 @@ export function useAuth() {
   }
   return context;
 }
-  const isModerator = (): boolean => {
-    return state.user?.role === 'moderator' || false;
-  };
-
-  const isContributor = (): boolean => {
-    return state.user?.role === 'contributor' || false;
-  }
