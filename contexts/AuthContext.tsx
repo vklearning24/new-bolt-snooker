@@ -127,6 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return result;
     } catch (error) {
       dispatch({ type: 'LOGIN_ERROR', payload: (error as Error).message });
+    }
     return authService.createUser(userData);
   };
 
@@ -197,4 +198,4 @@ export function useAuth() {
 
   const isContributor = (): boolean => {
     return state.user?.role === 'contributor' || false;
-}
+  }
