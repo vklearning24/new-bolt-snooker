@@ -51,23 +51,21 @@ Deno.serve(async (req) => {
       .select('role')
       .eq('id', user.id)
       .single();
-    const callerRole = profile?.role;
-
-    if (profileError || profile?.role !== 'admin') {
+    
+    if (profileError) {
       return new Response(
-        JSON.stringify({ error: 'Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Failed to fetch user profile' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    // Allow contributors to access if they have specific permissions for the action
-    // For now, we'll handle specific contributor restrictions within the POST/PUT logic
-    if (callerRole === 'contributor' && req.method !== 'GET') {
-      // If it's a GET request, contributors can view users.
-      // Specific POST/PUT restrictions are handled below.
-    } else if (callerRole !== 'admin' && callerRole !== 'contributor') {
-      // Only admins and contributors are allowed to interact with this function
-      throw new Error('Unauthorized access: Only admins and contributors can manage users.');
+    const callerRole = profile?.role;
+
+    if (!callerRole || (callerRole !== 'admin' && callerRole !== 'contributor')) {
+      return new Response(
+        JSON.stringify({ error: 'Admin or contributor access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const url = new URL(req.url);
