@@ -222,15 +222,15 @@ class AuthService {
         throw new Error(error.error || 'Failed to create user');
       }
 
-      const createdUserData = await response.json();
+      const userData = await response.json();
       return {
-        ...createdUserData,
-        createdAt: new Date(createdUserData.createdAt),
-        lastSignInAt: createdUserData.lastSignInAt ? new Date(createdUserData.lastSignInAt) : undefined,
-        emailConfirmedAt: createdUserData.emailConfirmedAt ? new Date(createdUserData.emailConfirmedAt) : undefined,
-        permissions: createdUserData.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : 
-                    createdUserData.role === 'editor' ? LEGACY_ROLE_PERMISSIONS.editor :
-                    createdUserData.role === 'moderator' ? LEGACY_ROLE_PERMISSIONS.moderator :
+        ...userData,
+        createdAt: new Date(userData.createdAt),
+        lastSignInAt: userData.lastSignInAt ? new Date(userData.lastSignInAt) : undefined,
+        emailConfirmedAt: userData.emailConfirmedAt ? new Date(userData.emailConfirmedAt) : undefined,
+        permissions: userData.role === 'admin' ? LEGACY_ROLE_PERMISSIONS.admin : 
+                    userData.role === 'editor' ? LEGACY_ROLE_PERMISSIONS.editor :
+                    userData.role === 'moderator' ? LEGACY_ROLE_PERMISSIONS.moderator :
                     LEGACY_ROLE_PERMISSIONS.streaming,
       };
     } catch (error) {
