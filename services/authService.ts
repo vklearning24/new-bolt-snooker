@@ -242,7 +242,7 @@ class AuthService {
   async updateUser(userId: string, updates: Partial<User>): Promise<User> {
     try {
       const headers = await this.getAuthHeaders();
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users/${userId}`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users/users/${userId}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({
@@ -277,7 +277,7 @@ class AuthService {
   async deleteUser(userId: string): Promise<void> {
     try {
       const headers = await this.getAuthHeaders();
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users/${userId}`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users/users/${userId}`, {
         method: 'DELETE',
         headers,
       });
