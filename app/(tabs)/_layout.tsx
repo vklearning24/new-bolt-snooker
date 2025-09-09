@@ -47,7 +47,7 @@ export default function TabLayout() {
       />
       
       {/* Admin-only tabs */}
-      {(isAdmin() || isContributor()) && (
+      {(isAdmin() || isContributor() || isEditor() || isModerator()) && (
         <>
           <Tabs.Screen
             name="scoreboard"

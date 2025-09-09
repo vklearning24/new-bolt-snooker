@@ -14,7 +14,9 @@ export default function UserManagement() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
+    name: '', 
+    // Default role for new users when a contributor is creating them
+    // This will be enforced by the backend as well.
     email: '',
     password: '', // Password is only for creation, not update
     role: 'streaming' as 'streaming' | 'admin',
@@ -36,7 +38,10 @@ export default function UserManagement() {
   };
 
   const handleCreateUser = async () => {
-    if (!formData.name || !formData.email || !formData.password) {
+    // If contributor, ensure role is streaming
+    const roleToCreate = isContributor() ? 'streaming' : formData.role;
+
+    if (!formData.name || !formData.email || !formData.password || !roleToCreate) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
@@ -45,8 +50,8 @@ export default function UserManagement() {
       const userData: CreateUserRequest = {
         name: formData.name,
         email: formData.email,
-        password: formData.password,
-        role: formData.role,
+        password: formData.password, // Password is only for creation
+        role: roleToCreate,
         permissions: [],
       };
 
@@ -66,8 +71,8 @@ export default function UserManagement() {
     try {
       await updateUser(editingUser.id, {
         name: formData.name,
-        email: formData.email,
-        role: formData.role,
+        email: formData.email, // Email cannot be updated via this function
+        role: formData.role, // Role can be updated
       });
       setEditingUser(null);
       setFormData({ name: '', email: '', password: '', role: 'streaming' });
@@ -116,7 +121,10 @@ export default function UserManagement() {
   };
 
   const startEdit = (user: User) => {
-    setEditingUser(user);
+    // If current user is contributor and target user is admin, prevent editing
+    if (isContributor() && user.role === 'admin') {
+      Alert.alert('Permission Denied', 'Contributors cannot edit admin users.');
+    } else {    setEditingUser(user);
     setFormData({
       name: user.name,
       email: user.email,
@@ -124,11 +132,15 @@ export default function UserManagement() {
       role: user.role,
     });
     setShowCreateForm(true);
+    }
   };
 
   const cancelForm = () => {
     setShowCreateForm(false);
     setEditingUser(null);
+    // Reset form data to default streaming role if current user is contributor
+    // This ensures the form is ready for a new streaming user creation
+    if (isContributor()) setFormData({ name: '', email: '', password: '', role: 'streaming' });
     setFormData({ name: '', email: '', password: '', role: 'streaming' });
   };
 
@@ -157,7 +169,10 @@ export default function UserManagement() {
         <Animated.View entering={FadeInUp.delay(100)} style={styles.section}>
           <View style={styles.searchContainer}>
             <Search size={20} color="#666" />
-            <TextInput
+            <TextInput 
+              // Disable search for contributors if they are not allowed to view all users
+              // (though current backend allows them to view all)
+              editable={!isContributor() || true} 
               style={styles.searchInput}
               placeholder="Search users..."
               placeholderTextColor="#666"
@@ -168,7 +183,9 @@ export default function UserManagement() {
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={styles.addButton}
-              onPress={() => setShowCreateForm(true)}
+              onPress={() => { 
+                setShowCreateForm(true); 
+                if (isContributor()) setFormData(prev => ({ ...prev, role: 'streaming' })); }}
             >
               <Plus size={20} color="#fff" />
               <Text style={styles.addButtonText}>Add User</Text>
@@ -221,10 +238,10 @@ export default function UserManagement() {
 
               <View style={styles.roleSelector}>
                 <TouchableOpacity
-                  // Disable 'streaming' role selection for contributors if they are editing an existing user
-                  // or if they are creating a new user and the role is not 'streaming'
-                  // The backend will enforce that contributors can only create 'streaming' users.
-                  disabled={isContributor() && editingUser && formData.role !== 'streaming'}
+                  // If contributor is editing an admin, disable all role changes
+                  // If contributor is creating, only streaming is allowed (other buttons disabled)
+                  // If contributor is editing non-admin, they can only change to streaming
+                  disabled={isContributor() && editingUser && editingUser.role === 'admin'}
 
                   style={[styles.roleButton, formData.role === 'streaming' && styles.activeRole]}
                   onPress={() => setFormData({ ...formData, role: 'streaming' })}
@@ -236,7 +253,9 @@ export default function UserManagement() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  // Disable 'admin' role selection for contributors
+                  // Disable 'admin' role selection for contributors (cannot create or assign admin)
+                  // Also disable if editing an admin user (cannot change admin's role)
+                  // This covers both creation and editing scenarios for contributors
                   disabled={isContributor()}
 
                   style={[styles.roleButton, formData.role === 'admin' && styles.activeRole]}
@@ -249,8 +268,10 @@ export default function UserManagement() {
                 </TouchableOpacity>
 
                 {/* Add Contributor role option */}
+                {/* Only admins can create/assign contributor role */}
                 <TouchableOpacity
-                  disabled={isContributor() && editingUser && formData.role !== 'contributor'}
+                  // Disable for contributors (cannot create other contributors, cannot change admin's role)
+                  disabled={isContributor() && (editingUser ? editingUser.role === 'admin' : true)}
                   style={[styles.roleButton, formData.role === 'contributor' && styles.activeRole]}
                   onPress={() => setFormData({ ...formData, role: 'contributor' })}
                 >
@@ -258,6 +279,32 @@ export default function UserManagement() {
                   <Text style={[styles.roleText, formData.role === 'contributor' && styles.activeRoleText]}>Contributor</Text>
                 </TouchableOpacity>
               </View>
+              
+              {/* Add Editor and Moderator role options for Admins */}
+              {!isContributor() && ( // Only show these options if the current user is NOT a contributor
+                <View style={styles.roleSelector}>
+                  <TouchableOpacity
+                    style={[styles.roleButton, formData.role === 'editor' && styles.activeRole]}
+                    onPress={() => setFormData({ ...formData, role: 'editor' })}
+                  >
+                    <Zap size={16} color={formData.role === 'editor' ? '#fff' : '#40E0D0'} />
+                    <Text style={[styles.roleText, formData.role === 'editor' && styles.activeRoleText]}>
+                      Editor
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.roleButton, formData.role === 'moderator' && styles.activeRole]}
+                    onPress={() => setFormData({ ...formData, role: 'moderator' })}
+                  >
+                    <Zap size={16} color={formData.role === 'moderator' ? '#fff' : '#40E0D0'} />
+                    <Text style={[styles.roleText, formData.role === 'moderator' && styles.activeRoleText]}>
+                      Moderator
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+
 
               <TouchableOpacity
                 style={styles.submitButton}
@@ -284,10 +331,12 @@ export default function UserManagement() {
                 <View style={styles.userInfo}>
                   <View style={styles.userHeader}>
                     <Text style={styles.userName}>{user.name}</Text>
-                    <View style={[styles.roleBadge, user.role === 'admin' && styles.adminBadge]}>
+                    <View style={[styles.roleBadge, user.role === 'admin' && styles.adminBadge, user.role === 'contributor' && styles.contributorBadge]}>
                       {user.role === 'admin' ? (
                         <Shield size={12} color="#fff" />
-                      ) : (
+                      ) : user.role === 'contributor' ? (
+                        <Users size={12} color="#fff" />
+                      ) : ( // Default for streaming, editor, moderator
                         <Zap size={12} color="#fff" />
                       )}
                       <Text style={styles.roleBadgeText}>
@@ -323,7 +372,7 @@ export default function UserManagement() {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    // Disable edit for admin users if the current user is a contributor
+                    // Disable edit for admin users if the current user is a contributor (backend also enforces)
                     disabled={isContributor() && user.role === 'admin'}
                     style={styles.actionButton}
                     onPress={() => startEdit(user)}
@@ -332,7 +381,7 @@ export default function UserManagement() {
                   </TouchableOpacity>
 
                   {/* Disable delete for current user and for admin users if the current user is a contributor */}
-                  {user.id !== currentUser?.id && !(isContributor() && user.role === 'admin') && (
+                  {user.id !== currentUser?.id && !(isContributor() && user.role === 'admin') && ( // Backend also enforces
                     <TouchableOpacity
                       disabled={isContributor() && user.role === 'admin'}
                       style={styles.actionButton}
@@ -556,6 +605,9 @@ const styles = StyleSheet.create({
   },
   adminBadge: {
     backgroundColor: '#FF9800',
+  },
+  contributorBadge: {
+    backgroundColor: '#006994', // A distinct color for contributor
   },
   roleBadgeText: {
     color: '#fff',

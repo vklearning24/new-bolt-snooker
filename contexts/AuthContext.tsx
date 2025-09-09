@@ -17,6 +17,7 @@ interface AuthContextType extends AuthState {
   isAdmin: () => boolean;
   isStreamer: () => boolean;
   isContributor: () => boolean;
+  isContributor: () => boolean;
   isEditor: () => boolean;
   isModerator: () => boolean;
 }
@@ -122,52 +123,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       dispatch({ type: 'LOGIN_ERROR', payload: (error as Error).message });
       throw error;
-    }
-  };
-
-  const register = async (userData: RegisterRequest) => {
-    dispatch({ type: 'LOGIN_START' });
-    try {
-      const result = await authService.register(userData);
       dispatch({ type: 'CLEAR_ERROR' });
       return result;
     } catch (error) {
       dispatch({ type: 'LOGIN_ERROR', payload: (error as Error).message });
-      throw error;
-    }
-  };
-
-
-  const logout = () => {
-    authService.logout();
-    dispatch({ type: 'LOGOUT' });
-  };
-
-  const createUser = async (userData: CreateUserRequest) => {
-    if (!state.user || state.user.role !== 'admin') {
-      throw new Error('Only admin users can create new accounts');
-    }
     return authService.createUser(userData);
   };
 
   const updateUser = async (userId: string, updates: Partial<User>) => {
-    if (!state.user || state.user.role !== 'admin') {
-      throw new Error('Only admin users can update accounts');
-    }
-    return authService.updateUser(userId, updates);
-  };
-
-  const deleteUser = async (userId: string) => {
-    if (!state.user || state.user.role !== 'admin') {
-      throw new Error('Only admin users can delete accounts');
-    }
     return authService.deleteUser(userId);
   };
 
   const getAllUsers = async () => {
-    if (!state.user || state.user.role !== 'admin') {
-      throw new Error('Only admin users can view all accounts');
-    }
     return authService.getAllUsers();
   };
 
@@ -194,10 +161,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return state.user?.role === 'editor' || false;
   };
   return (
-    // Add isContributor to the context provider
-    // This will allow components to easily check if the current user is a contributor
-    // and adjust UI elements accordingly.
-
     <AuthContext.Provider
       value={{
         ...state,
@@ -221,7 +184,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -229,11 +191,10 @@ export function useAuth() {
   }
   return context;
 }
-
   const isModerator = (): boolean => {
     return state.user?.role === 'moderator' || false;
   };
 
   const isContributor = (): boolean => {
     return state.user?.role === 'contributor' || false;
-  };
+}
