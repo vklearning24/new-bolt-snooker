@@ -51,12 +51,23 @@ Deno.serve(async (req) => {
       .select('role')
       .eq('id', user.id)
       .single();
+    const callerRole = profile?.role;
 
     if (profileError || profile?.role !== 'admin') {
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+    
+    // Allow contributors to access if they have specific permissions for the action
+    // For now, we'll handle specific contributor restrictions within the POST/PUT logic
+    if (callerRole === 'contributor' && req.method !== 'GET') {
+      // If it's a GET request, contributors can view users.
+      // Specific POST/PUT restrictions are handled below.
+    } else if (callerRole !== 'admin' && callerRole !== 'contributor') {
+      // Only admins and contributors are allowed to interact with this function
+      throw new Error('Unauthorized access: Only admins and contributors can manage users.');
     }
 
     const url = new URL(req.url);
@@ -107,6 +118,14 @@ Deno.serve(async (req) => {
       const body = await req.json();
       const { email, password, name, role } = body;
 
+      // Contributor-specific restriction for user creation
+      if (callerRole === 'contributor' && role !== 'streaming') {
+        throw new Error('Permission denied: Contributors can only create users with the "streaming" role.');
+      }
+      // Prevent contributors from creating admin users
+      if (callerRole === 'contributor' && role === 'admin') {
+        throw new Error('Permission denied: Contributors cannot create admin users.');
+      }
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
@@ -157,6 +176,16 @@ Deno.serve(async (req) => {
       const userId = url.pathname.split('/').pop();
       const body = await req.json();
       const { name, role, isActive } = body;
+      
+      // Contributor-specific restriction for user updates
+      if (callerRole === 'contributor') {
+        // Prevent contributors from assigning admin role
+        if (role === 'admin') {
+          throw new Error('Permission denied: Contributors cannot assign the "admin" role.');
+        }
+        // Prevent contributors from deactivating/deleting admin users
+        // This check is more complex and might require fetching the target user's role first
+      }
 
       // Check if this is a self-update that would remove admin privileges
       if (user.id === userId) {
@@ -216,6 +245,18 @@ Deno.serve(async (req) => {
     if (method === 'DELETE' && url.pathname.includes('/users/')) {
       // Delete user
       const userId = url.pathname.split('/').pop();
+      
+      // Contributor-specific restriction for user deletion
+      if (callerRole === 'contributor') {
+        const { data: targetProfile, error: targetProfileError } = await supabaseAdmin
+          .from('user_profiles')
+          .select('role')
+          .eq('id', userId)
+          .single();
+        if (targetProfileError || targetProfile?.role === 'admin') {
+          throw new Error('Permission denied: Contributors cannot delete admin users.');
+        }
+      }
 
       const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
       

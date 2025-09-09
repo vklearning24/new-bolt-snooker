@@ -70,11 +70,20 @@ export const LEGACY_ROLE_PERMISSIONS = {
     { id: 'moments_control', name: 'Moments Control', description: 'Trigger and manage special moments', category: 'moments' },
     { id: 'summary_access', name: 'Summary Access', description: 'View and generate match summaries', category: 'summary' },
     { id: 'user_management', name: 'User Management', description: 'Create and manage user accounts', category: 'admin' },
-  ]
+  ],
+  contributor: [
+    // Contributor permissions will be defined here, mirroring DEFAULT_ROLE_PERMISSIONS for consistency
+    { id: 'users.invite', name: 'Invite Users', description: 'Can invite new users to the workspace', category: 'users' },
+    { id: 'users.manage', name: 'Manage Users', description: 'Can create, update, and delete user accounts', category: 'users' },
+    { id: 'roles.assign', name: 'Assign Roles', description: 'Can assign and modify user roles', category: 'admin' },
+    { id: 'scoreboard_manage', name: 'Scoreboard Management', description: 'Manage scoreboard and scores', category: 'scoreboard' },
+    { id: 'moments_control', name: 'Moments Control', description: 'Trigger and manage special moments', category: 'moments' },
+    { id: 'summary_access', name: 'Summary Access', description: 'View and generate match summaries', category: 'summary' },
+  ],
 } as const;
 
 // types/auth.ts
-export type Role = 'admin' | 'streaming' | 'editor' | 'moderator';
+export type Role = 'admin' | 'streaming' | 'editor' | 'moderator' | 'contributor';
 
 // types/auth.ts
 export const DEFAULT_PERMISSIONS = {
@@ -103,6 +112,8 @@ export type PermissionId = keyof typeof DEFAULT_PERMISSIONS;
 export type Permission = typeof DEFAULT_PERMISSIONS[PermissionId];
 
 // types/auth.ts
+// Note: 'users.manage' and 'roles.assign' will have their behavior
+// conditionally restricted for 'contributor' role in the backend (Edge Function).
 export const DEFAULT_ROLE_PERMISSIONS: Record<Role, PermissionId[]> = {
   admin: [
     'users.invite',
@@ -118,6 +129,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, PermissionId[]> = {
   ],
   streaming: [
     // add only what streamers should have
+  ],
+  contributor: [
+    'users.invite',
+    'users.manage',
+    'roles.assign',
   ],
 };
 
