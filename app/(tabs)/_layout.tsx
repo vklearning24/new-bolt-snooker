@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoginScreen from '@/components/LoginScreen';
 
 export default function TabLayout() {
-  const { isAuthenticated, isAdmin, isContributor } = useAuth();
+  const { isAuthenticated, isAdmin, isContributor, isEditor, isModerator } = useAuth();
 
   if (!isAuthenticated) {
     return <LoginScreen />;
