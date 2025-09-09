@@ -340,7 +340,11 @@ export default function UserManagement() {
                         <Zap size={12} color="#fff" />
                       )}
                       <Text style={styles.roleBadgeText}>
-                        {user.role === 'admin' ? 'Admin' : 'Streamer'}
+                        {user.role === 'admin' ? 'Admin' : 
+                         user.role === 'contributor' ? 'Contributor' :
+                         user.role === 'editor' ? 'Editor' :
+                         user.role === 'moderator' ? 'Moderator' :
+                         'Streamer'}
                       </Text>
                     </View>
                   </View>
