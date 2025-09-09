@@ -351,9 +351,9 @@ export default function UserManagement() {
                     <Text style={styles.userMetaText}>
                       Created: {user.createdAt.toLocaleDateString()}
                     </Text>
-                    {user.lastLogin && (
+                    {user.lastSignInAt && (
                       <Text style={styles.userMetaText}>
-                        Last login: {user.lastLogin.toLocaleDateString()}
+                        Last login: {user.lastSignInAt.toLocaleDateString()}
                       </Text>
                     )}
                   </View>
