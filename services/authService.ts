@@ -295,7 +295,7 @@ class AuthService {
   async getAllUsers(): Promise<User[]> {
     try {
       const headers = await this.getAuthHeaders();
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users/users`, {
         method: 'GET',
         headers,
       });
